@@ -3,6 +3,7 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+#include <ctime>
 
 #include "Params.cpp"
 #include "ProModel.cpp"
@@ -22,6 +23,9 @@ class ProReader
 		{
 			int16_t i2;
 			float f4;
+			double d8;
+			clock_t start, end;
+			start = clock();
 
 			std::ifstream in(path.c_str(), std::ios::binary);
 
@@ -63,8 +67,32 @@ class ProReader
 				std::cout << "StepLongitudeTime: " << f4 << std::endl;
 				proModel.StepLongitudeTime = f4;
 
-				std::cout << std::endl;
+				in.read((char*)&d8, doubleType);
+				std::cout << "A: " << d8 << std::endl;
+				proModel.A = d8;
+
+				in.read((char*)&d8, doubleType);
+				std::cout << "B: " << d8 << std::endl;
+				proModel.B = d8;
+
+				proModel.stepLat = proModel.StepLat();
+				proModel.stepLon = proModel.StepLon();
+
+				in.seekg(Reserve, std::ios_base::cur);
+
+				for (size_t i = 0; i < proModel.Lines; i++)
+				{
+					for (size_t i = 0; i < proModel.Pixels; i++)
+					{
+						in.read((char*)&i2, unsignedType);
+						proModel.BrtList.push_back(i2);
+					}
+				}
+
 				in.close();
+				end = clock();
+
+				cout << endl << "Time " << (((double)end - start) / ((double)CLOCKS_PER_SEC)) << endl;
 			}
 		}
 };

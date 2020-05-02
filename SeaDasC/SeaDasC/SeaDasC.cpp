@@ -12,11 +12,11 @@ using namespace std;
 int main(int argc, char* argv[])
 {
     //Заглушка
-    /*
-    argc = 2;
-    string path = "C:\\Users\\dex25\\Desktop\\SeaDasC\\Resources\\n85113_2.pro";
-    */
     
+ /*   argc = 2;
+    string path = "C:\\Users\\dex25\\Desktop\\NcProParser\\SeaDasC\\Resources\\n85113_2.pro";
+    
+    */
 
     if (argc != 2)
     {

@@ -1,133 +1,177 @@
 #pragma once;
 
-#include "ProModel.cpp"
-#include "NcModel.cpp"
-#include "Params.cpp"
-
 #include <fstream>
 #include <iostream>
+#include <filesystem>
+#include <ctime>
+
+#include "ProModel.cpp"
+#include "Params.cpp"
 
 class NcWriter
 {
-	public:
-		NcWriter(ProModel proModel) {
-			StartWrite(proModel);
-		}
-	private:
-		
-		void StartWrite(ProModel proModel) {
+public:
+	NcWriter(ProModel proModel) {
+		HardStartWrite(proModel);
+	}
+private:
 
-			NcModel ncModel;
+	//Жесткий отосительно быстрый вариант
+	void HardStartWrite(ProModel proModel)
+	{
+		std::string line;
+		std::ifstream in(originsCdlFile);
+		std::ofstream out;
 
-			std::string line;
-			std::ifstream in(originsCdlFile);
-			std::ofstream out;
+		clock_t start, end;
+		start = clock();
 
-			out.open(tempFile);
-			if (in.is_open() && out.is_open())
+		out.open(tempFile);
+		if (in.is_open() && out.is_open())
+		{
+			std::cout << std::endl << "Start write..." << std::endl;
+
+			//	Запись шапки с данными для pro с 1 по 2 строку включительно
+			for (size_t i = 0; i < 2; i++)
 			{
-				std::cout << std::endl << "Start re-write cdl file..." << std::endl;
+				getline(in, line);
+				out << line << std::endl;
+			}
+			//Замена размеров в шапке
+			for (size_t i = 0; i < 2; i++)
+			{
+				getline(in, line);
+			}
+			out << "	lat = " << proModel.Lines << " ;" << std::endl;
+			out << "	lon = " << proModel.Pixels << " ;" << std::endl;
+			//	Запись шапки с данными для pro с 4 по 58 строку включительно
+			for (size_t i = 4; i < 58; i++)
+			{
+				getline(in, line);
+				out << line << std::endl;
+			}
+		
+			//Полезная нагрузка - пропускаем строки с 58 по 70
+			for (size_t i = 58; i < 70; i++)
+			{
+				getline(in, line);
+			}
+			//Заполняем собственными значениями
+			float north = proModel.Latitude + proModel.LatitudeSize;
+			float south = proModel.Latitude;
+			float west = proModel.Longitude;
+			float east = proModel.Longitude + proModel.LongitudeSize;
 
-				while (getline(in, line))
+			out << "		:northernmost_latitude = " << north << " ;" << std::endl;
+			out << "		:southernmost_latitude = " << south << " ;" << std::endl;
+			out << "		:westernmost_longitude = " << west << " ;" << std::endl;
+			out << "		:easternmost_longitude = " << east << " ;" << std::endl;
+
+			out << "		:geospatial_lat_max = " << north << " ;" << std::endl;
+			out << "		:geospatial_lat_min = " << south << " ;" << std::endl;
+			out << "		:geospatial_lon_max = " << east << " ;" << std::endl;
+			out << "		:geospatial_lon_min = " << west << " ;" << std::endl;
+
+			out << "		:latitude_step = " << proModel.StepLatitudeTime << " ;" << std::endl;
+			out << "		:longitude_step = " << proModel.StepLongitudeTime << " ;" << std::endl;
+			out << "		:sw_point_latitude = " << proModel.Latitude << " ;" << std::endl;
+			out << "		:sw_point_longitude = " << proModel.Longitude << " ;" << std::endl;
+			//Конец заполнения с 58 по 70
+		
+			//Информация о разрешении (не знаю где брать)
+			for (size_t i = 70; i < 75; i++)
+			{
+				getline(in, line);
+				out << line << std::endl;
+			}
+
+			//Информация о числе строк и столбцов
+			for (size_t i = 75; i < 77; i++)
+			{
+				getline(in, line);
+			}
+
+			out << "		:number_of_lines = " << proModel.Lines << " ;" << std::endl;
+			out << "		:number_of_columns = " << proModel.Pixels << " ;" << std::endl;
+
+			//Заполнение оставшейся части global global attributes с 78 по 102 включительно (с захватом начала DataSet)
+
+			for (size_t i = 77; i < 102; i++)
+			{
+				getline(in, line);
+				out << line << std::endl;
+			}
+
+			end = clock();
+			cout << endl << "Time header " << (((double)end - start) / ((double)CLOCKS_PER_SEC)) << endl;
+			
+			//Заполнение DataSet`ов. Сначала заполняем температуру поверхности океана sst, затем широту lat и после долготу lon
+			
+			//sst часть, заполняется последовательно по 25 точек
+			out << " sst = " << endl << "	";
+
+			int16_t count = 0; // счетчик для отступов
+			int16_t last = proModel.BrtList.back(); //получаем последний элемент, в конце к нему будет добавлена ;
+			proModel.BrtList.pop_back(); // удаляем последний элемент
+			for (int16_t point : proModel.BrtList) {
+				int16_t temperature = point;//proModel.ConvertToTemperature(point);
+				if (temperature == 0) out << "_";
+				else out << temperature;
+
+				out << ", ";
+
+				count++;
+				if (count % 25 == 0) 
 				{
-					line = LineModule(line, ncModel, proModel);
-
-					out << line << std::endl;
+					count = 0;
+					out << endl << "	";
 				}
+			}
+			// Записываем последний элемент
+			int16_t temperature = last; proModel.ConvertToTemperature(last);
+			if (temperature == 0) out << "_";
+			else out << temperature;
+			out << " ;" << endl;
 
-				std::cout << std::endl  << "Re-write is ready." << std::endl;
+			end = clock();
+			cout << endl << "Time sst part " << (((double)end - start) / ((double)CLOCKS_PER_SEC)) << endl;
+			//конец sst части
+
+			//lat часть, заполняется по 6 или 7 точек
+			out << " lat = ";
+			for (size_t i = 1; i < proModel.Pixels; i++)
+			{
+				out << proModel.Latitude + i * proModel.stepLat << ", ";
+				if (i % 7 == 0) out << endl << "	";
+			}
+			out << proModel.Latitude + proModel.Pixels * proModel.stepLat << " ;" << endl; // последнее число оканчивается на ;
+			//конец lat части
+			end = clock();
+			cout << endl << "Time lat part " << (((double)end - start) / ((double)CLOCKS_PER_SEC)) << endl;
+			//lon часть, заполняется по 6 или 7 точек
+			//конец lon части
+			out << " lon = ";
+			for (size_t i = 1; i < proModel.Lines; i++)
+			{
+				out << proModel.Longitude + i * proModel.stepLon << ", ";
+				if (i % 7 == 0) out << endl << "	";
+			}
+			out << proModel.Longitude + proModel.Lines * proModel.stepLon << " ;" << endl; // последнее число оканчивается на ;
+			//Конец DataSet
+			end = clock();
+			cout << endl << "Time lon part " << (((double)end - start) / ((double)CLOCKS_PER_SEC)) << endl;
+			//Заполняем подвал из оставшейся части 102 по 160:
+			for (size_t i = 102; i < 160; i++)
+			{
+				getline(in, line);
+				out << line << std::endl;
 			}
 
-			out.close();
-			in.close();
+			//Конец
+			std::cout << std::endl << "Write is ready." << std::endl;
 		}
 
-		std::string LineModule(std::string line, NcModel ncModel, ProModel proModel) {
-
-			std::string equal;
-
-			equal = Equal(ncModel.number_of_lines);
-			if (line.find(equal) != std::string::npos) {
-				return (ncModel.number_of_lines + std::to_string(proModel.Lines) + " ;");
-			}
-
-			equal = Equal(ncModel.number_of_columns);
-			if (line.find(equal) != std::string::npos) {
-				return (ncModel.number_of_columns + std::to_string(proModel.Pixels) + " ;");
-			}
-
-			equal = Equal(ncModel.latitude_step);
-			if (line.find(equal) != std::string::npos) {
-				return (ncModel.latitude_step + std::to_string(proModel.StepLatitudeTime) + " ;");
-			}
-
-			equal = Equal(ncModel.longitude_step);
-			if (line.find(equal) != std::string::npos) {
-				return (ncModel.longitude_step + std::to_string(proModel.StepLongitudeTime) + " ;");
-			}
-
-			equal = Equal(ncModel.sw_point_latitude);
-				if (line.find(equal) != std::string::npos) {
-				return (ncModel.sw_point_latitude + std::to_string(proModel.Latitude) + " ;");
-			}
-
-			equal = Equal(ncModel.sw_point_longitude);
-				if (line.find(equal) != std::string::npos) {
-				return (ncModel.sw_point_longitude + std::to_string(proModel.Longitude) + " ;");
-			}
-
-			equal = Equal(ncModel.northernmost_latitude);
-				if (line.find(equal) != std::string::npos) {
-				float north = proModel.Latitude + proModel.LatitudeSize;
-				return (ncModel.northernmost_latitude + std::to_string(north) + " ;");
-			}
-
-			equal = Equal(ncModel.geospatial_lat_max);
-				if (line.find(equal) != std::string::npos) {
-				float north = proModel.Latitude + proModel.LatitudeSize;
-				return (ncModel.geospatial_lat_max + std::to_string(north) + " ;");
-			}
-
-			equal = Equal(ncModel.southernmost_latitude);
-				if (line.find(equal) != std::string::npos) {
-				float south = proModel.Latitude;
-				return (ncModel.southernmost_latitude + std::to_string(south) + " ;");
-			}
-
-			equal = Equal(ncModel.geospatial_lat_min);
-				if (line.find(equal) != std::string::npos) {
-				float south = proModel.Latitude;
-				return (ncModel.geospatial_lat_min + std::to_string(south) + " ;");
-			}
-
-			equal = Equal(ncModel.westernmost_longitude);
-				if (line.find(equal) != std::string::npos) {
-				float west = proModel.Longitude;
-				return (ncModel.westernmost_longitude + std::to_string(west) + " ;");
-			}
-
-			equal = Equal(ncModel.geospatial_lon_max);
-				if (line.find(equal) != std::string::npos) {
-				float west = proModel.Longitude;
-				return (ncModel.geospatial_lon_max + std::to_string(west) + " ;");
-			}
-
-			equal = Equal(ncModel.easternmost_longitude);
-				if (line.find(equal) != std::string::npos) {
-				float east = proModel.Longitude + proModel.LongitudeSize;
-				return (ncModel.easternmost_longitude + std::to_string(east) + " ;");
-			}
-
-			equal = Equal(ncModel.geospatial_lon_min);
-				if (line.find(equal) != std::string::npos) {
-				float east = proModel.Longitude + proModel.LongitudeSize;
-				return (ncModel.geospatial_lon_min + std::to_string(east) + " ;");
-			}
-
-			return line;
-		}
-
-		std::string Equal(std::string equal) {
-			return equal.substr(equal.find(':'), equal.find('='));
-		}
+		out.close();
+		in.close();
+	}
 };

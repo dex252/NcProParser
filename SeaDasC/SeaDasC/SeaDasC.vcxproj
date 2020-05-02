@@ -147,7 +147,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="NcModel.cpp" />
     <ClCompile Include="NcWriter.cpp" />
     <ClCompile Include="Params.cpp" />
     <ClCompile Include="ProModel.cpp" />

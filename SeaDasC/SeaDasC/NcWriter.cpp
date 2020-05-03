@@ -115,6 +115,7 @@ private:
 			proModel.BrtList.pop_back(); // удаляем последний элемент
 			for (int16_t point : proModel.BrtList) {
 				int16_t temperature = point;//proModel.ConvertToTemperature(point);
+				
 				if (temperature == 0) out << "_";
 				else out << temperature;
 
@@ -149,7 +150,7 @@ private:
 			end = clock();
 			cout << endl << "Time lat part " << (((double)end - start) / ((double)CLOCKS_PER_SEC)) << endl;
 			//lon часть, заполняется по 6 или 7 точек
-			//конец lon части
+
 			out << " lon = ";
 			for (size_t i = 1; i < proModel.Lines; i++)
 			{
@@ -157,6 +158,9 @@ private:
 				if (i % 7 == 0) out << endl << "	";
 			}
 			out << proModel.Longitude + proModel.Lines * proModel.stepLon << " ;" << endl; // последнее число оканчивается на ;
+
+			//конец lon части
+			
 			//Конец DataSet
 			end = clock();
 			cout << endl << "Time lon part " << (((double)end - start) / ((double)CLOCKS_PER_SEC)) << endl;

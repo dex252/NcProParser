@@ -13,10 +13,10 @@ int main(int argc, char* argv[])
 {
     //Заглушка
     
- /*   argc = 2;
+  /*  argc = 2;
     string path = "C:\\Users\\dex25\\Desktop\\NcProParser\\SeaDasC\\Resources\\n85113_2.pro";
-    
     */
+    
 
     if (argc != 2)
     {
@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
     }
     
     //Чтение из .pro
-    //ProReader proReader(path);
+    //    ProReader proReader(path);
     ProReader proReader(argv[1]);
 
     //Запись в temp.cdl
@@ -41,5 +41,5 @@ int main(int argc, char* argv[])
     */
    
 
-   // system("pause");
+    //system("pause");
 }

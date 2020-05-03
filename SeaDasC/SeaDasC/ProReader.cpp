@@ -80,12 +80,33 @@ class ProReader
 
 				in.seekg(Reserve, std::ios_base::cur);
 
-				for (size_t i = 0; i < proModel.Lines; i++)
+				in.seekg(NoradDataAndÑorrection, std::ios_base::cur);
+
+				int32_t** matrix = new int32_t* [proModel.Lines];;
+				for (int32_t i = 0; i < proModel.Lines; i++)
 				{
-					for (size_t i = 0; i < proModel.Pixels; i++)
+					matrix[i] = new int[proModel.Pixels];
+				}
+
+				int lines = static_cast<int16_t>(proModel.Lines)-1;
+				for (int32_t i = lines; i >= 0; i--)
+				{
+				
+					for (int32_t j = 0; j < proModel.Pixels; j++)
 					{
 						in.read((char*)&i2, unsignedType);
-						proModel.BrtList.push_back(i2);
+						matrix[i][j] = i2;
+					
+						//in.read((char*)&i2, unsignedType);
+						//proModel.BrtList.push_back(i2);
+					}
+				}
+
+				for (int32_t i = 0; i < proModel.Lines; i++)
+				{
+					for (int32_t j = 0; j < proModel.Pixels; j++)
+					{
+						proModel.BrtList.push_back(matrix[i][j]);
 					}
 				}
 

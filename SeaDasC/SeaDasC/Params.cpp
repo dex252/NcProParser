@@ -9,6 +9,7 @@ const std::string outputFile = "C:\\Users\\dex25\\Desktop\\NcProParser\\SeaDasC\
 
 const int32_t skipProHeaders = 74;
 const int32_t Reserve = 10;
+const int32_t NoradDataAnd—orrection = 384;
 
 const int32_t unsignedType = 2;
 const int32_t floatType = 4;

@@ -128,7 +128,7 @@ private:
 				}
 			}
 			// Записываем последний элемент
-			int16_t temperature = last; proModel.ConvertToTemperature(last);
+			int16_t temperature = last; //proModel.ConvertToTemperature(last);
 			if (temperature == 0) out << "_";
 			else out << temperature;
 			out << " ;" << endl;
